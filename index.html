@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sudoku Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- ══════════════════════════════════════════════
+       ÉTAPE 1 : Remplacez ca-pub-XXXX par votre vrai
+       Publisher ID depuis votre compte Google AdSense
+       ══════════════════════════════════════════════ -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --accent: #e8ff47;
+    --accent2: #ff4757;
+    --accent3: #47d5ff;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --border: #2a2a40;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 15% 15%, rgba(232,255,71,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 85%, rgba(71,213,255,0.05) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 520px;
+    padding: 16px 14px 80px;
+  }
+
+  header { text-align: center; margin-bottom: 18px; }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px; letter-spacing: 10px; line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(232,255,71,0.35);
+  }
+  .tagline { font-size: 10px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+  .diff-bar { display: flex; gap: 5px; margin-bottom: 14px; }
+  .diff-btn {
+    flex: 1; padding: 9px 0;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer; transition: all .2s; position: relative; overflow: hidden;
+  }
+  .diff-btn::after { content:''; position:absolute; bottom:0;left:0;right:0;height:2px; background:transparent; transition:background .2s; }
+  .diff-btn[data-d="easy"]:hover,   .diff-btn[data-d="easy"].active    { color:#47ff8a; border-color:rgba(71,255,138,.25); }
+  .diff-btn[data-d="easy"].active::after { background:#47ff8a; }
+  .diff-btn[data-d="medium"]:hover, .diff-btn[data-d="medium"].active  { color:var(--accent); border-color:rgba(232,255,71,.25); }
+  .diff-btn[data-d="medium"].active::after { background:var(--accent); }
+  .diff-btn[data-d="hard"]:hover,   .diff-btn[data-d="hard"].active    { color:#ff9447; border-color:rgba(255,148,71,.25); }
+  .diff-btn[data-d="hard"].active::after { background:#ff9447; }
+  .diff-btn[data-d="extreme"]:hover,.diff-btn[data-d="extreme"].active { color:var(--accent2); border-color:rgba(255,71,87,.25); }
+  .diff-btn[data-d="extreme"].active::after { background:var(--accent2); }
+
+  .stats-bar {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 16px; margin-bottom:10px;
+    background:var(--surface); border:1px solid var(--border);
+  }
+  .stat { text-align:center; }
+  .stat-label { font-size:9px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+  .stat-value { font-size:18px; font-weight:700; margin-top:2px; }
+  .hearts { display:flex; gap:6px; align-items:center; }
+  .heart { font-size:22px; transition:all .3s; }
+  .heart.lost { filter:grayscale(1) opacity(.25); animation:hb .35s ease; }
+  @keyframes hb { 0%{transform:scale(1.6)}50%{transform:scale(.8)rotate(-15deg)}100%{transform:scale(1)} }
+
+  .progress-bar { height:3px; background:var(--border); margin-bottom:12px; }
+  .progress-fill { height:100%; background:var(--accent); transition:width .5s; box-shadow:0 0 8px rgba(232,255,71,.5); }
+
+  /* ── GRID ── */
+  .grid {
+    display:grid; grid-template-columns:repeat(9,1fr);
+    border:2px solid var(--accent);
+    background:var(--surface);
+    box-shadow:0 0 30px rgba(232,255,71,.1),inset 0 0 30px rgba(0,0,0,.3);
+    width:100%; aspect-ratio:1; margin-bottom:12px;
+  }
+  .cell {
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:clamp(13px,3.8vw,22px); font-weight:700;
+    cursor:pointer; position:relative;
+    border:1px solid #1e1e30; transition:background .12s;
+    user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  /* thick box borders – left/top of each new box */
+  .cell[data-col="3"],.cell[data-col="6"] { border-left:2px solid rgba(232,255,71,.35); }
+  .cell[data-row="3"],.cell[data-row="6"] { border-top:2px solid rgba(232,255,71,.35); }
+
+  .cell.given    { color:var(--text); cursor:default; }
+  .cell.user-ok  { color:var(--accent3); }
+  .cell.user-err { color:var(--accent2); animation:shake .3s; }
+  .cell.selected { background:rgba(71,213,255,.15) !important; }
+  .cell.highlight{ background:rgba(71,213,255,.05); }
+  .cell.same-num { background:rgba(232,255,71,.09); }
+  .cell:not(.given):not(.selected):hover { background:rgba(255,255,255,.04); }
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+  .notes-grid { display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); position:absolute; inset:0; padding:2px; overflow:hidden; }
+  .note-n { font-size:clamp(7px,1.5vw,10px); color:var(--muted); display:flex; align-items:center; justify-content:center; font-weight:700; line-height:1; }
+  .note-n.on { color:var(--accent3); }
+
+  /* ── NUMPAD ── */
+  .numpad { display:grid; grid-template-columns:repeat(9,1fr); gap:5px; margin-bottom:12px; }
+  .num-btn {
+    aspect-ratio:1; border:1px solid var(--border); background:var(--surface);
+    color:var(--text); font-family:'Space Mono',monospace;
+    font-size:clamp(13px,3.2vw,20px); font-weight:700;
+    cursor:pointer; transition:all .15s;
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .num-btn .cnt { position:absolute; bottom:2px; right:3px; font-size:7px; color:var(--muted); }
+  .num-btn:hover  { background:rgba(232,255,71,.1); border-color:var(--accent); color:var(--accent); }
+  .num-btn:active { transform:scale(.9); }
+  .num-btn.done   { opacity:.25; pointer-events:none; }
+
+  /* ── ACTIONS ── */
+  .actions { display:flex; gap:7px; margin-bottom:12px; }
+  .act-btn {
+    flex:1; padding:11px 6px;
+    border:1px solid var(--border); background:var(--surface);
+    color:var(--muted); font-family:'Space Mono',monospace;
+    font-size:9px; letter-spacing:1px; text-transform:uppercase;
+    cursor:pointer; transition:all .2s;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .act-btn span { font-size:17px; }
+  .act-btn:hover { color:var(--text); border-color:var(--accent3); }
+  .act-btn.on    { color:var(--accent3); border-color:var(--accent3); background:rgba(71,213,255,.08); }
+
+  /* ── NEW GAME BTN ── */
+  .new-btn {
+    width:100%; padding:15px;
+    border:2px solid var(--accent); background:transparent;
+    color:var(--accent); font-family:'Bebas Neue',sans-serif;
+    font-size:22px; letter-spacing:6px; text-transform:uppercase;
+    cursor:pointer; transition:all .2s;
+  }
+  .new-btn:hover  { background:var(--accent); color:var(--bg); box-shadow:0 0 28px rgba(232,255,71,.35); }
+  .new-btn:active { transform:scale(.98); }
+
+  /* ── OVERLAYS ── */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:200; align-items:center; justify-content:center; backdrop-filter:blur(10px); }
+  .overlay.show { display:flex; }
+  .obox { background:var(--surface); border:1px solid var(--border); padding:44px 36px; text-align:center; max-width:330px; width:90%; animation:pop .4s cubic-bezier(.16,1,.3,1); }
+  @keyframes pop{from{transform:translateY(36px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .obox .icon    { font-size:60px; margin-bottom:12px; }
+  .obox .otitle  { font-family:'Bebas Neue',sans-serif; font-size:44px; letter-spacing:3px; margin-bottom:8px; }
+  .obox .osub    { color:var(--muted); font-size:11px; line-height:1.7; margin-bottom:28px; }
+  .obtn { width:100%; padding:13px; border:none; cursor:pointer; transition:all .2s; font-family:'Space Mono',monospace; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+  .obtn.primary { background:var(--accent); color:var(--bg); }
+  .obtn.primary:hover { box-shadow:0 0 22px rgba(232,255,71,.4); }
+  .obtn.danger  { background:var(--accent2); color:#fff; }
+  .obtn.danger:hover  { box-shadow:0 0 22px rgba(255,71,87,.4); }
+  .obtn.ghost   { background:transparent; color:var(--muted); border:1px solid var(--border); }
+  .obtn.ghost:hover   { color:var(--text); border-color:var(--muted); }
+
+  /* ── AD BANNER ── */
+  .ad-banner { position:fixed; bottom:0;left:0;right:0; background:var(--surface2); border-top:1px solid var(--border); padding:10px 14px; display:flex; align-items:center; gap:10px; z-index:100; height:58px; }
+  .ad-label  { font-size:8px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; white-space:nowrap; }
+  .ad-content{ flex:1; text-align:center; }
+  .ad-mock   { display:inline-block; padding:5px 16px; background:rgba(232,255,71,.07); border:1px dashed rgba(232,255,71,.2); color:rgba(232,255,71,.45); font-size:10px; letter-spacing:2px; }
+  .ad-x      { background:none; border:1px solid var(--border); color:var(--muted); font-family:'Space Mono',monospace; font-size:9px; padding:5px 9px; cursor:pointer; white-space:nowrap; letter-spacing:1px; text-transform:uppercase; transition:all .2s; }
+  .ad-x:hover{ color:var(--text); border-color:var(--muted); }
+
+  /* ad watch box */
+  .ad-watch-box { background:var(--surface2); border:1px solid var(--border); padding:24px; margin:16px 0; }
+  .ad-big       { font-size:13px; letter-spacing:2px; color:rgba(232,255,71,.5); }
+  .ad-count     { font-family:'Bebas Neue',sans-serif; font-size:56px; color:var(--accent3); line-height:1; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">SUDOKU HUB</div>
+    <div class="tagline">The Sudoku Hub — Play, Think, Win</div>
+  </header>
+
+  <div class="diff-bar">
+    <button class="diff-btn active" data-d="easy"    onclick="setDiff('easy')">Easy</button>
+    <button class="diff-btn"        data-d="medium"  onclick="setDiff('medium')">Medium</button>
+    <button class="diff-btn"        data-d="hard"    onclick="setDiff('hard')">Hard</button>
+    <button class="diff-btn"        data-d="extreme" onclick="setDiff('extreme')">Extreme</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-label">Time</div>
+      <div class="stat-value" id="timer">00:00</div>
+    </div>
+    <div class="hearts">
+      <div class="heart" id="h1">❤️</div>
+      <div class="heart" id="h2">❤️</div>
+      <div class="heart" id="h3">❤️</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Score</div>
+      <div class="stat-value" id="score">0</div>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="prog" style="width:0%"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="numpad" id="numpad"></div>
+
+  <div class="actions">
+    <button class="act-btn" onclick="erase()"><span>⌫</span>Erase</button>
+    <button class="act-btn" id="noteBtn" onclick="toggleNote()"><span>✏️</span>Notes</button>
+    <button class="act-btn" id="hintBtn" onclick="hint()"><span>💡</span>Hint (3)</button>
+  </div>
+
+  <button class="new-btn" onclick="newGame()">⟳ New Game</button>
+</div>
+
+<!-- AD BANNER -->
+<div class="ad-banner" id="adBanner">
+  <div class="ad-label">Ad</div>
+  <div class="ad-content">
+    <!-- ══════════════════════════════════════════
+         ADSENSE BANNER — Replace ca-pub-XXXX and the slot
+         with your real values from your AdSense account
+         ══════════════════════════════════════════ -->
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:320px;height:50px"
+         data-ad-client="ca-pub-XXXXXXXXXXXXXXXXXXXX"
+         data-ad-slot="XXXXXXXXXX"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+  <button class="ad-x" onclick="closeAdBanner()">✕ Close</button>
+</div>
+
+<!-- WIN -->
+<div class="overlay" id="oWin">
+  <div class="obox">
+    <div class="icon">🏆</div>
+    <div class="otitle" style="color:var(--accent)">Victory!</div>
+    <div class="osub" id="winMsg">Congratulations!</div>
+    <button class="obtn primary" onclick="newGame();closeOverlay('oWin')">⟳ New Game</button>
+    <button class="obtn ghost"   onclick="closeOverlay('oWin')">View Grid</button>
+  </div>
+</div>
+
+<!-- LOSE -->
+<div class="overlay" id="oLose">
+  <div class="obox">
+    <div class="icon">💔</div>
+    <div class="otitle" style="color:var(--accent2)">3 Errors!</div>
+    <div class="osub">You have used all 3 lives.<br>Watch an ad to continue, or start a new game.</div>
+    <button class="obtn danger"  onclick="watchAd()">📺 Watch an Ad — Continue</button>
+    <button class="obtn primary" onclick="newGame();closeOverlay('oLose')">⟳ New Game</button>
+  </div>
+</div>
+
+<!-- AD WATCH -->
+<div class="overlay" id="oAd">
+  <div class="obox">
+    <div class="icon">📺</div>
+    <div class="otitle" style="color:var(--accent3)">Ad</div>
+    <div class="osub">Wait to recover your 3 lives.</div>
+    <div class="ad-watch-box">
+      <!-- ══════════════════════════════════════════
+           ADSENSE VIDEO / DISPLAY — same ID as above
+           ══════════════════════════════════════════ -->
+      <ins class="adsbygoogle"
+           style="display:inline-block;width:300px;height:250px"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXXXXXX"
+           data-ad-slot="XXXXXXXXXX"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      <div class="ad-count" id="adCt">5</div>
+    </div>
+    <button class="obtn primary" id="adOkBtn" disabled style="opacity:.4" onclick="adDone()">Please wait...</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  ROBUST SUDOKU GENERATOR (shuffle-based, instant)
+//  Always produces a valid, unique solution grid.
+// ════════════════════════════════════════════════
+
+function rnd(n) { return Math.floor(Math.random()*n); }
+function shuffle(a){
+  const arr=[...a];
+  for(let i=arr.length-1;i>0;i--){const j=rnd(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}
+  return arr;
+}
+
+function makeSolved() {
+  // Valid base grid
+  const BASE = [
+    1,2,3,4,5,6,7,8,9,
+    4,5,6,7,8,9,1,2,3,
+    7,8,9,1,2,3,4,5,6,
+    2,3,4,5,6,7,8,9,1,
+    5,6,7,8,9,1,2,3,4,
+    8,9,1,2,3,4,5,6,7,
+    3,4,5,6,7,8,9,1,2,
+    6,7,8,9,1,2,3,4,5,
+    9,1,2,3,4,5,6,7,8,
+  ];
+
+  // Random digit relabelling
+  const digits = shuffle([1,2,3,4,5,6,7,8,9]);
+  const remap = {}; for(let i=0;i<9;i++) remap[i+1]=digits[i];
+
+  // Shuffle rows within each band and bands
+  const bRow = [shuffle([0,1,2]), shuffle([3,4,5]), shuffle([6,7,8])];
+  const bOrder = shuffle([0,1,2]);
+  const rowIdx = bOrder.flatMap(b => bRow[b]);
+
+  // Shuffle cols within each stack and stacks
+  const bCol = [shuffle([0,1,2]), shuffle([3,4,5]), shuffle([6,7,8])];
+  const sOrder = shuffle([0,1,2]);
+  const colIdx = sOrder.flatMap(s => bCol[s]);
+
+  const sol = Array(81);
+  for(let r=0;r<9;r++)
+    for(let c=0;c<9;c++)
+      sol[r*9+c] = remap[ BASE[rowIdx[r]*9 + colIdx[c]] ];
+  return sol;
+}
+
+function makePuzzle(sol, clues) {
+  const puz = [...sol];
+  const pos  = shuffle([...Array(81).keys()]);
+  for(let i=0; i < 81-clues; i++) puz[pos[i]] = 0;
+  return puz;
+}
+
+// ════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════
+
+const CLUES = { easy:46, medium:36, hard:28, extreme:22 };
+
+let puzzle, solution, user, notes;
+let selected   = null;
+let errors     = 0;
+let noteMode   = false;
+let diff       = 'easy';
+let seconds    = 0;
+let score      = 0;
+let gameOver   = false;
+let timerID    = null;
+let adBannerHidden = false;
+let hintsLeft  = 3;
+
+// ════════════════════════════════════════════════
+//  NEW GAME  ← called at init and by button
+// ════════════════════════════════════════════════
+
+function newGame() {
+  closeAllOverlays();
+  gameOver  = false;
+  errors    = 0;
+  score     = 0;
+  selected  = null;
+  noteMode  = false;
+  hintsLeft = 3;
+  document.getElementById('noteBtn').classList.remove('on');
+  document.getElementById('score').textContent = '0';
+  updateHintBtn();
+  updateHearts();
+
+  solution = makeSolved();
+  puzzle   = makePuzzle(solution, CLUES[diff]);
+  user     = Array(81).fill(0);
+  notes    = Array(81).fill(null).map(()=>new Set());
+
+  startTimer();
+  render();
+}
+
+// ════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════
+
+function render() {
+  const G = document.getElementById('grid');
+  G.innerHTML = '';
+
+  const selR = selected===null ? -1 : Math.floor(selected/9);
+  const selC = selected===null ? -1 : selected%9;
+  const selV = selected===null ? 0  : (puzzle[selected]||user[selected]);
+
+  for(let i=0; i<81; i++){
+    const r = Math.floor(i/9), c = i%9;
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.dataset.row = r; el.dataset.col = c;
+
+    const val = puzzle[i] || user[i];
+
+    if(puzzle[i]){
+      el.textContent = puzzle[i];
+      el.classList.add('given');
+    } else if(user[i]>0){
+      el.textContent = user[i];
+      el.classList.add(user[i]===solution[i] ? 'user-ok' : 'user-err');
+    } else if(notes[i] && notes[i].size>0){
+      const ng = document.createElement('div');
+      ng.className = 'notes-grid';
+      for(let n=1;n<=9;n++){
+        const nd = document.createElement('div');
+        nd.className = 'note-n'+(notes[i].has(n)?' on':'');
+        nd.textContent = n;
+        ng.appendChild(nd);
+      }
+      el.appendChild(ng);
+    }
+
+    if(selected===i){
+      el.classList.add('selected');
+    } else if(selected!==null){
+      const sameBox = Math.floor(r/3)===Math.floor(selR/3) && Math.floor(c/3)===Math.floor(selC/3);
+      if(r===selR || c===selC || sameBox) el.classList.add('highlight');
+      if(selV && selV===val) el.classList.add('same-num');
+    }
+
+    el.onclick = ()=>{ selected=i; render(); };
+    G.appendChild(el);
+  }
+  updateProgress();
+  renderNumpad();
+}
+
+function renderNumpad(){
+  const NP = document.getElementById('numpad');
+  NP.innerHTML = '';
+  for(let n=1;n<=9;n++){
+    let cnt=0;
+    for(let i=0;i<81;i++) if((puzzle[i]||user[i])===n) cnt++;
+    const btn = document.createElement('button');
+    btn.className = 'num-btn'+(cnt>=9?' done':'');
+    btn.innerHTML = `${n}<span class="cnt">${cnt}/9</span>`;
+    btn.onclick = ()=>input(n);
+    NP.appendChild(btn);
+  }
+}
+
+// ════════════════════════════════════════════════
+//  INPUT
+// ════════════════════════════════════════════════
+
+function input(n){
+  if(gameOver || selected===null) return;
+  if(puzzle[selected]) return;
+
+  // ── MODE NOTES : toujours en premier, avant tout ──
+  if(noteMode){
+    // Pas de note si la cellule a déjà une valeur correcte
+    if(user[selected] > 0) return;
+    if(!notes[selected]) notes[selected] = new Set();
+    notes[selected].has(n) ? notes[selected].delete(n) : notes[selected].add(n);
+    render();
+    return;
+  }
+
+  // ── MODE NORMAL ──
+  // Cliquer sur le même chiffre = effacer (sauf si erreur déjà posée)
+  if(user[selected] === n){ user[selected]=0; render(); return; }
+
+  // Effacer les notes de cette case
+  notes[selected] = new Set();
+  user[selected]  = n;
+
+  if(n !== solution[selected]){
+    errors++; updateHearts(); render();
+    if(errors >= 3){ gameOver=true; clearInterval(timerID); setTimeout(()=>openOverlay('oLose'),450); }
+  } else {
+    clearRelatedNotes(selected, n);
+    score += Math.max(5, 40-Math.floor(seconds/10));
+    document.getElementById('score').textContent = score;
+    render();
+    checkWin();
+  }
+}
+
+function erase(){
+  if(gameOver||selected===null||puzzle[selected]) return;
+  user[selected]=0; notes[selected]=new Set(); render();
+}
+
+function toggleNote(){
+  noteMode=!noteMode;
+  document.getElementById('noteBtn').classList.toggle('on',noteMode);
+}
+
+function hint(){
+  if(gameOver) return;
+
+  // Limite : 3 indices par partie
+  if(hintsLeft <= 0){
+    // Flash le bouton pour signaler la limite
+    const btn = document.querySelector('.act-btn:nth-child(3)');
+    btn.style.color = 'var(--accent2)';
+    btn.style.borderColor = 'var(--accent2)';
+    setTimeout(()=>{ btn.style.color=''; btn.style.borderColor=''; }, 800);
+    return;
+  }
+
+  // Trouver la case cible : case sélectionnée vide en priorité, sinon première case vide
+  let target = null;
+  if(selected !== null && !puzzle[selected] && user[selected] <= 0){
+    target = selected;
+  } else {
+    // chercher une case vide ou erronée
+    for(let i=0;i<81;i++){
+      if(!puzzle[i] && (user[i]===0 || user[i]!==solution[i])){ target=i; break; }
+    }
+  }
+  if(target === null) return; // tout est déjà bon
+
+  const n = solution[target];
+  notes[target]  = new Set();
+  user[target]   = n;
+  selected       = target;
+  hintsLeft--;
+  score = Math.max(0, score - 20);
+  document.getElementById('score').textContent = score;
+  updateHintBtn();
+  clearRelatedNotes(target, n);
+  render();
+  checkWin();
+}
+
+function updateHintBtn(){
+  const btn = document.getElementById('hintBtn');
+  if(btn){
+    btn.innerHTML = `<span>💡</span>Hint (${hintsLeft})`;
+    btn.style.opacity = hintsLeft <= 0 ? '0.35' : '1';
+  }
+}
+
+function clearRelatedNotes(pos,n){
+  const r=Math.floor(pos/9),c=pos%9;
+  for(let i=0;i<81;i++){
+    const ir=Math.floor(i/9),ic=i%9;
+    if(ir===r||ic===c||(Math.floor(ir/3)===Math.floor(r/3)&&Math.floor(ic/3)===Math.floor(c/3)))
+      if(notes[i]) notes[i].delete(n);
+  }
+}
+
+// ════════════════════════════════════════════════
+//  WIN / PROGRESS
+// ════════════════════════════════════════════════
+
+function checkWin(){
+  for(let i=0;i<81;i++) if((puzzle[i]||user[i])!==solution[i]) return;
+  gameOver=true; clearInterval(timerID);
+  const bonus = errors===0?500:errors===1?200:50;
+  score+=bonus;
+  document.getElementById('score').textContent=score;
+  document.getElementById('winMsg').textContent =
+    `Level ${diff} completed in ${fmt(seconds)} • ${errors} error(s) • Score: ${score}`;
+  setTimeout(()=>openOverlay('oWin'),400);
+}
+
+function updateProgress(){
+  let f=0;
+  for(let i=0;i<81;i++) if(puzzle[i]||user[i]>0) f++;
+  document.getElementById('prog').style.width=Math.round(f/81*100)+'%';
+}
+
+function updateHearts(){
+  for(let i=1;i<=3;i++) document.getElementById('h'+i).classList.toggle('lost',i<=errors);
+}
+
+// ════════════════════════════════════════════════
+//  TIMER
+// ════════════════════════════════════════════════
+
+function startTimer(){
+  clearInterval(timerID);
+  seconds=0;
+  document.getElementById('timer').textContent='00:00';
+  timerID=setInterval(()=>{ seconds++; document.getElementById('timer').textContent=fmt(seconds); },1000);
+}
+
+function fmt(s){
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+
+// ════════════════════════════════════════════════
+//  DIFFICULTY
+// ════════════════════════════════════════════════
+
+function setDiff(d){
+  diff=d;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-d="${d}"]`).classList.add('active');
+  newGame();
+}
+
+// ════════════════════════════════════════════════
+//  OVERLAYS
+// ════════════════════════════════════════════════
+
+function openOverlay(id)  { document.getElementById(id).classList.add('show'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
+function closeAllOverlays(){ ['oWin','oLose','oAd'].forEach(closeOverlay); }
+
+// ════════════════════════════════════════════════
+//  AD
+// ════════════════════════════════════════════════
+
+function closeAdBanner(){
+  document.getElementById('adBanner').style.display='none';
+  adBannerHidden=true;
+}
+
+function watchAd(){
+  closeOverlay('oLose');
+  openOverlay('oAd');
+  let c=5;
+  const btn=document.getElementById('adOkBtn');
+  const ct =document.getElementById('adCt');
+  btn.disabled=true; btn.style.opacity='0.4'; btn.textContent='Please wait...';
+  ct.textContent=c;
+  const t=setInterval(()=>{
+    c--; ct.textContent=c;
+    if(c<=0){
+      clearInterval(t);
+      btn.disabled=false; btn.style.opacity='1'; btn.textContent='Continue Playing ✓';
+    }
+  },1000);
+}
+
+function adDone(){
+  closeOverlay('oAd');
+  errors=0; gameOver=false; updateHearts();
+  timerID=setInterval(()=>{ seconds++; document.getElementById('timer').textContent=fmt(seconds); },1000);
+  if(adBannerHidden){
+    document.getElementById('adBanner').style.display='flex';
+    adBannerHidden=false;
+  }
+  render();
+}
+
+// ════════════════════════════════════════════════
+//  KEYBOARD
+// ════════════════════════════════════════════════
+
+document.addEventListener('keydown', e=>{
+  if(gameOver) return;
+  if(e.key>='1'&&e.key<='9'){ input(+e.key); return; }
+  if(e.key==='Backspace'||e.key==='Delete'){ erase(); return; }
+  if(e.key.toLowerCase()==='n'){ toggleNote(); return; }
+  if(selected===null) return;
+  const r=Math.floor(selected/9), c=selected%9;
+  if(e.key==='ArrowRight'&&c<8){ selected++; render(); e.preventDefault(); }
+  if(e.key==='ArrowLeft' &&c>0){ selected--; render(); e.preventDefault(); }
+  if(e.key==='ArrowDown' &&r<8){ selected+=9; render(); e.preventDefault(); }
+  if(e.key==='ArrowUp'   &&r>0){ selected-=9; render(); e.preventDefault(); }
+});
+
+// ════════════════════════════════════════════════
+//  START
+// ════════════════════════════════════════════════
+newGame();
+</script>
+</body>
+</html>
