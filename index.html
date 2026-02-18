@@ -26,11 +26,17 @@
     --border: #d8d8d0;
     --given-color: #1a1a1a;
     --shadow: 0 2px 16px rgba(0,0,0,0.08);
+    --grid-outer: #555555;
+    --grid-box: #888888;
+    --grid-cell: #cccccc;
   }
 
   /* ── DARK MODE ── */
   :root.dark {
     --logo-shadow: 0 0 40px rgba(232,255,71,0.35);
+    --grid-outer: #e8ff47;
+    --grid-box: rgba(232,255,71,0.5);
+    --grid-cell: #2a2a40;
     --bg: #0a0a0f;
     --surface: #12121a;
     --surface2: #1a1a26;
@@ -168,12 +174,12 @@
     aspect-ratio:1; display:flex; align-items:center; justify-content:center;
     font-size:clamp(13px,3.8vw,22px); font-weight:700;
     cursor:pointer; position:relative;
-    border:1px solid var(--border); transition:background .12s;
+    border:1px solid var(--grid-cell); transition:background .12s;
     user-select:none; -webkit-tap-highlight-color:transparent;
   }
   /* thick box borders – left/top of each new box */
-  .cell[data-col="3"],.cell[data-col="6"] { border-left:2px solid rgba(232,255,71,.35); }
-  .cell[data-row="3"],.cell[data-row="6"] { border-top:2px solid rgba(232,255,71,.35); }
+  .cell[data-col="3"],.cell[data-col="6"] { border-left:2px solid var(--grid-box); }
+  .cell[data-row="3"],.cell[data-row="6"] { border-top:2px solid var(--grid-box); }
 
   .cell.given    { color:var(--given-color); cursor:default; font-weight:800; }
   .cell.user-ok  { color:var(--accent3); }
@@ -182,8 +188,8 @@
   :root.dark .cell.selected { background:rgba(71,213,255,.15) !important; }
   .cell.highlight{ background:rgba(21,88,176,.06); }
   :root.dark .cell.highlight { background:rgba(71,213,255,.05); }
-  .cell.same-num { background:rgba(26,107,60,.1); }
-  :root.dark .cell.same-num { background:rgba(232,255,71,.09); }
+  .cell.same-num { background:rgba(26,107,60,.22); outline: 1px solid rgba(26,107,60,.4); }
+  :root.dark .cell.same-num { background:rgba(232,255,71,.22); outline: 1px solid rgba(232,255,71,.4); }
   .cell:not(.given):not(.selected):hover { background:rgba(255,255,255,.04); }
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 
